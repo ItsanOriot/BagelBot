@@ -14,7 +14,7 @@ time.sleep(2)
 
 def scan(image):
     imArr = np.array(image)
-    region = imArr[220:230, 210:217]
+    region = imArr[235:245, 420:434]
     red = region[:,:,0]
     green = region[:,:,1]
     blue = region[:,:,2]
