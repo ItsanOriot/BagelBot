@@ -10,7 +10,7 @@ import concurrent.futures
 led = LED(17)
 camera = PiCamera()
 camera.resolution = (854, 480)
-camera.framerate = 25
+camera.framerate = 30
 camera.start_preview()
 time.sleep(2)
 
