@@ -1,0 +1,27 @@
+from picamera import PiCamera
+from gpiozero import LED
+import time
+from io import BytesIO
+from PIL import Image
+import numpy as np
+ 
+led=LED(17)
+camera = PiCamera()
+camera.resolution = (854, 480)
+camera.framerate = 25
+time.sleep(2)
+ 
+def scan():
+    stream = BytesIO()
+    camera.capture(stream, format='jpeg')
+    stream.seek(0)
+    im = Image.open(stream)
+    imArr = np.array(im)
+    for x in range(220,230):
+        for y in range(210,217):
+            if (imArr[x][2*y][0] / (imArr[x][2*y][1]+1)) > 1.3 and (imArr[x][2*y][2] / (imArr[x][2*y][1]+1)) > 1.3:
+                return True
+    return False
+ 
+while True:
+    print(scan())
