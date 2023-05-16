@@ -32,7 +32,7 @@ def scan(image):
     blue_green_ratio = np.divide(blue, green+1)
     #if the ratio of red and blue to green is large enough it will be purple. This solution is suprisingly accurate but I'm worried about false positives.
     #I may change to a normal range solution or try something like lehmenkuehler's motion detection solution.
-    condition = (red_green_ratio > 1.3) & (blue_green_ratio > 1.3)
+    condition = (red_green_ratio > 1.3) & (blue_green_ratio > 1.3) & (blue > 100) & (red > 100)
     return np.any(condition)
 
 #All hail chatgpt for making this asynchronous
