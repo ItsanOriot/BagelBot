@@ -1,27 +1,32 @@
 from picamera import PiCamera
 from gpiozero import LED
 import time
-from io import BytesIO
-from PIL import Image
 import numpy as np
- 
-led=LED(17)
+import cv2
+import concurrent.futures
+
+led = LED(17)
 camera = PiCamera()
 camera.resolution = (854, 480)
 camera.framerate = 25
+camera.start_preview()
 time.sleep(2)
- 
-def scan():
-    stream = BytesIO()
-    camera.capture(stream, format='jpeg')
-    stream.seek(0)
-    im = Image.open(stream)
-    imArr = np.array(im)
-    for x in range(220,230):
-        for y in range(210,217):
-            if (imArr[x][2*y][0] / (imArr[x][2*y][1]+1)) > 1.3 and (imArr[x][2*y][2] / (imArr[x][2*y][1]+1)) > 1.3:
-                return True
-    return False
- 
-while True:
-    print(scan())
+
+def scan(image):
+    imArr = np.array(image)
+    region = imArr[220:230, 210:217]
+    red = region[:,:,0]
+    green = region[:,:,1]
+    blue = region[:,:,2]
+    red_green_ratio = np.divide(red, green+1)
+    blue_green_ratio = np.divide(blue, green+1)
+    condition = (red_green_ratio > 1.3) & (blue_green_ratio > 1.3)
+    return np.any(condition)
+
+with concurrent.futures.ThreadPoolExecutor() as executor:
+    while True:
+        future = executor.submit(camera.capture, BytesIO(), format='jpeg', use_video_port=True)
+        if scan(cv2.imdecode(np.frombuffer(future.result().getbuffer(), dtype=np.uint8), cv2.IMREAD_COLOR)):
+            print(True)
+        else:
+            print(False)
