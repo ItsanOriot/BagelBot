@@ -1,46 +1,51 @@
 #imports
 from picamera import PiCamera
-from gpiozero import LED
+import random
+import RPi.GPIO as GPIO
 import time
+from io import BytesIO
 import numpy as np
 import cv2
 import concurrent.futures
 
 #setting the gpio pin of the mouse and the specs of the "camera"
-led = LED(17)
 camera = PiCamera()
-camera.resolution = (854, 480)
-camera.framerate = 30
-camera.start_preview()
+camera.resolution = (864, 480)
+camera.framerate = 50
+camera.zoom = (0.494,0.49,0.012,0.02)
 time.sleep(2)
+
+#setting up the led for registering clicks
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+GPIO.setup(18,GPIO.OUT)
+GPIO.output(18,GPIO.HIGH)
+
+#camera.start_preview()
 
 #the function which scans an image for purple
 def scan(image):
     #creates numpy array with the image
     imArr = np.array(image)
+
+    #checking for the right colors
+    conditionColors = np.any((imArr[..., 0] > 219) & (np.logical_and(imArr[..., 1] > 54, imArr[..., 1] < 128)) & (imArr[..., 2] > 172))
+    return conditionColors
     
-    #defines the fov. Currently it is 10x14 in a 480p image. image resolution might be increased depending on performance. Fov will also be tweaked later.
-    region = imArr[235:245, 420:434]
-    
-    #defines red, green, and blue as their respective row of the 3d numpy array
-    red = region[:,:,0]
-    green = region[:,:,1]
-    blue = region[:,:,2]
-    
-    #gets the ratio of red to green and blue to green (green+1 to ensure it never attempts to divide by 0)
-    red_green_ratio = np.divide(red, green+1)
-    blue_green_ratio = np.divide(blue, green+1)
-    #if the ratio of red and blue to green is large enough it will be purple. This solution is suprisingly accurate but I'm worried about false positives.
-    #I may change to a normal range solution or try something like lehmenkuehler's motion detection solution.
-    condition = (red_green_ratio > 1.3) & (blue_green_ratio > 1.3) & (blue > 100) & (red > 100)
-    return np.any(condition)
 
 #All hail chatgpt for making this asynchronous
 #Also I won't have a job in a few years so please stop being smart
 with concurrent.futures.ThreadPoolExecutor() as executor:
-    while True:
-        future = executor.submit(camera.capture, BytesIO(), format='jpeg', use_video_port=True)
-        if scan(cv2.imdecode(np.frombuffer(future.result().getbuffer(), dtype=np.uint8), cv2.IMREAD_COLOR)):
-            print(True)
-        else:
-            print(False)
+    stream = BytesIO()
+    for _ in camera.capture_continuous(stream, format='rgb', use_video_port=True):
+        stream.seek(0)
+        image = np.frombuffer(stream.getvalue(), dtype=np.uint8)
+        image = image.reshape((480, 864, 3))
+        if scan(image):
+            print("click")
+            GPIO.output(18, GPIO.LOW)
+            time.sleep(0.01 * random.random())
+            GPIO.output(18, GPIO.HIGH)
+            time.sleep(0.06 * random.random())
+        stream.seek(0)
+        stream.truncate()
