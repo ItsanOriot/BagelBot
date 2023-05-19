@@ -5,14 +5,13 @@ import RPi.GPIO as GPIO
 import time
 from io import BytesIO
 import numpy as np
-import cv2
 import concurrent.futures
 
 #setting the gpio pin of the mouse and the specs of the "camera"
 camera = PiCamera()
 camera.resolution = (864, 480)
 camera.framerate = 50
-camera.zoom = (0.494,0.49,0.012,0.02)
+camera.zoom = (0.49,0.48,0.02,0.04)
 time.sleep(2)
 
 #setting up the led for registering clicks
@@ -25,11 +24,8 @@ GPIO.output(18,GPIO.HIGH)
 
 #the function which scans an image for purple
 def scan(image):
-    #creates numpy array with the image
-    imArr = np.array(image)
-
-    #checking for the right colors
-    conditionColors = np.any((imArr[..., 0] > 219) & (np.logical_and(imArr[..., 1] > 54, imArr[..., 1] < 128)) & (imArr[..., 2] > 172))
+    # Checking for the right colors
+    conditionColors = np.any((image[..., 0] > 219) & (np.logical_and(image[..., 1] > 54, image[..., 1] < 128)) & (image[..., 2] > 172))
     return conditionColors
     
 
@@ -44,8 +40,8 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
         if scan(image):
             print("click")
             GPIO.output(18, GPIO.LOW)
-            time.sleep(0.01 * random.random())
-            GPIO.output(18, GPIO.HIGH)
             time.sleep(0.06 * random.random())
+            GPIO.output(18, GPIO.HIGH)
+            time.sleep(0.08 * random.random())
         stream.seek(0)
         stream.truncate()
