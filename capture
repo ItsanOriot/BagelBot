@@ -30,8 +30,6 @@ def scan(image):
     return conditionColors
     
 
-#All hail chatgpt for making this asynchronous
-#Also I won't have a job in a few years so please stop being smart
 with concurrent.futures.ThreadPoolExecutor() as executor:
     stream = BytesIO()
     for _ in camera.capture_continuous(stream, format='rgb', use_video_port=True):
