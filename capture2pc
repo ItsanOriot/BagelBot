@@ -1,30 +1,26 @@
 import os
-import time
 os.environ["BLINKA_FT232H"] = "1"
+import time
 import board
 import digitalio
-
-#imports
 from picamera import PiCamera
 import random
 import time
 from io import BytesIO
 import numpy as np
 import concurrent.futures
+import cv2
 
 #setting the gpio pin of the mouse and the specs of the "camera"
-camera = PiCamera()
-camera.resolution = (864, 480)
-camera.framerate = 50
-camera.zoom = (0.493,0.48,0.014,0.04)
+camera = cv2.VideoCapture(0)
 time.sleep(2)
 
-led = digitalio.DigitalInOut(board.C0)
-led.direction = digitalio.Direction.OUTPUT
-led2 = digitalio.DigitalInOut(board.D0)
-led2.direction = digitalio.Direction.INPUT
+m1 = digitalio.DigitalInOut(board.C0)
+m1.direction = digitalio.Direction.OUTPUT
+button = digitalio.DigitalInOut(board.D0)
+button.direction = digitalio.Direction.INPUT
+button.pull = digitalio.Pull.UP
 
-#camera.start_preview()
 
 #the function which scans an image for purple
 def scan(image):
@@ -37,14 +33,13 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
     stream = BytesIO()
     for _ in camera.capture_continuous(stream, format='rgb', use_video_port=True):
             stream.seek(0)
-            image = np.frombuffer(stream.getvalue(), dtype=np.uint8)
-            image = image.reshape((480, 864, 3))
-            if scan(image):
-                if not GPIO.input(17):
+            ret, frame = video_capture.read()
+            if scan(frame):
+                if (not button.value):
                     print("click")
-                        led.value = True
-                        time.sleep(0.06 * random.random())
-                        led.value = False
-                        time.sleep(0.13 * random.random())
+                        m1.value = True
+                        time.sleep(0.1 * random.random())
+                        m1.value = False
+                        time.sleep(0.1 * random.random())
             stream.seek(0)
             stream.truncate()
