@@ -10,7 +10,9 @@ import dxcam
 from win32api import GetSystemMetrics
 
 fov = 17
-left, top = (1920 - fov) // 2, (1080 - fov) // 2
+width = GetSystemMetrics (0)
+height = GetSystemMetrics (1)
+left, top = (width - fov) // 2, (height - fov) // 2
 right, bottom = left + fov, top + fov
 region = (left, top, right, bottom)
 targetFPS = 100
