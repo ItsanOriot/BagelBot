@@ -16,7 +16,7 @@ region = (left, top, right, bottom)
 targetFPS = 100
 scanned = 0
 
-lowerHSV = np.array([140, 111, 140])
+lowerHSV = np.array([140, 90, 140])
 upperHSV = np.array([150, 159, 255])
 
 
