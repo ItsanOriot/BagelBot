@@ -9,7 +9,7 @@ import cv2
 import dxcam
 from win32api import GetSystemMetrics
 
-fov = 20
+fov = 17
 left, top = (1920 - fov) // 2, (1080 - fov) // 2
 right, bottom = left + fov, top + fov
 region = (left, top, right, bottom)
@@ -17,7 +17,7 @@ targetFPS = 100
 scanned = 0
 
 lowerHSV = np.array([140, 111, 140])
-upperHSV = np.array([148, 154, 194])
+upperHSV = np.array([150, 159, 255])
 
 
 #setting the gpio pin of the mouse and the specs of the "camera"
@@ -45,4 +45,4 @@ while True:
             m1.value = False
             time.sleep(0.1 * random.random())
             m1.value = True
-            time.sleep(0.1 * random.random())
+            time.sleep(0.4 * random.random())
