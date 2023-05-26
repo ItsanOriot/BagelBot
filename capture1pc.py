@@ -9,7 +9,7 @@ import cv2
 import dxcam
 from win32api import GetSystemMetrics
 
-fov = 17
+fov = 20
 width = GetSystemMetrics (0)
 height = GetSystemMetrics (1)
 left, top = (width - fov) // 2, (height - fov) // 2
