@@ -4,17 +4,17 @@ import time
 import board
 import digitalio
 import random
-import time
 import numpy as np
 import cv2
 import dxcam
 from win32api import GetSystemMetrics
 
-fov = 30
+fov = 20
 left, top = (1920 - fov) // 2, (1080 - fov) // 2
 right, bottom = left + fov, top + fov
 region = (left, top, right, bottom)
-targetFPS = 30
+targetFPS = 100
+scanned = 0
 
 lowerHSV = np.array([140, 111, 140])
 upperHSV = np.array([148, 154, 194])
