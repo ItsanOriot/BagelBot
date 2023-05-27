@@ -140,7 +140,7 @@ class App(customtkinter.CTk):
         self.slider_2.configure(command=self.progressbar_3.set)
         self.progressbar_1.configure(mode="indeterminnate")
         self.progressbar_1.start()
-        self.textbox.insert("0.0", "CTkTextbox\n\n" + "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.\n\n" * 20)
+        self.textbox.insert("0.0", "CTkTextbox\n\n" + "blah blah blah\n\n" * 20)
         self.seg_button_1.configure(values=["CTkSegmentedButton", "Value 2", "Value 3"])
         self.seg_button_1.set("Value 2")
 
