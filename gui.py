@@ -1,90 +1,108 @@
-import tkinter
-import tkinter.messagebox
 import customtkinter
-import time
 import os
 from PIL import Image
-
-customtkinter.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
-customtkinter.set_default_color_theme("gui-theme.json")  # Themes: "blue" (standard), "green", "dark-blue"
+import time
 
 
 class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
 
-        # configure window
-        self.title("BagelBot")
-        self.geometry(f"{600}x{350}")
+        self.title("bagelbot.py")
+        self.geometry("600x350")
 
-         #sidebar frame
-        self.sidebar_frame = customtkinter.CTkFrame(self, width=80, corner_radius=0)
-        self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(4, weight=1)
+        # set grid layout 1x2
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
 
-        #logo
-        self.logo_image = customtkinter.CTkImage(light_image=Image.open("logoLight.jpg"), dark_image=Image.open("logoDark.jpg"), size=(150, 26))
-        self.image_label = customtkinter.CTkLabel(self.sidebar_frame, image=self.logo_image, text="")
-        self.image_label.grid(row=0, column=0, padx=20, pady=(20, 10))
+        # load images with light and dark mode image
+        self.logo_image = customtkinter.CTkImage(light_image=Image.open("logoLight.png"), dark_image=Image.open("logoDark.png"), size=(150, 26))
+        self.color_image = customtkinter.CTkImage(light_image=Image.open("colorLight.png"), dark_image=Image.open("colorDark.png"), size=(40, 40))
+        self.chat_image = customtkinter.CTkImage(light_image=Image.open("timeLight.png"), dark_image=Image.open("timeDark.png"), size=(30, 30))
+        self.settings_image = customtkinter.CTkImage(light_image=Image.open("settingsLight.png"), dark_image=Image.open("settingsDark.png"), size=(30, 30))
 
-        self.sidebar_button_1 = customtkinter.CTkButton(self.sidebar_frame, command=self.hide_window)
-        self.sidebar_button_1.grid(row=1, column=0, padx=20, pady=10)
-        self.sidebar_button_2 = customtkinter.CTkButton(self.sidebar_frame, command=self.sidebar_button_event)
-        self.sidebar_button_2.grid(row=2, column=0, padx=20, pady=10)
-        self.sidebar_button_3 = customtkinter.CTkButton(self.sidebar_frame, command=self.sidebar_button_event)
-        self.sidebar_button_3.grid(row=3, column=0, padx=20, pady=10)
-        
-        #appearance mode
-        self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
-        self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
-        self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["Dark", "Light", "System"],
-                                                                       command=self.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
+        # create navigation frame
+        self.navigation_frame = customtkinter.CTkFrame(self, corner_radius=0)
+        self.navigation_frame.grid(row=0, column=0, sticky="nsew")
+        self.navigation_frame.grid_rowconfigure(4, weight=1)
 
-        # create tabview
-        self.tabview = customtkinter.CTkTabview(self, width=380)
-        self.tabview.grid(row=0, column=2, padx=(20, 0), pady=(5, 0), sticky="nsew")
+        #Draw logo
+        self.navigation_frame_label = customtkinter.CTkLabel(self.navigation_frame, text="", image=self.logo_image,
+                                                             compound="left", font=customtkinter.CTkFont(size=15, weight="bold"))
+        self.navigation_frame_label.grid(row=0, column=0, padx=20, pady=20)
+
 
         #Colors tab
-        self.tabview.add("Colors")
-        self.tabview.tab("Colors").grid_columnconfigure(0, weight=1)
-        self.label_tab_1 = customtkinter.CTkLabel(self.tabview.tab("Colors"), text="Outline Color")
-        self.label_tab_1.grid(row=0, column=0, padx=20, pady=(0, 0))
-        self.optionmenu_1 = customtkinter.CTkOptionMenu(self.tabview.tab("Colors"), dynamic_resizing=False,
-                                                        values=["Purple", "Yellow", "Red"])
-        self.optionmenu_1.grid(row=1, column=0, padx=20, pady=(0, 10))
-        
-
+        self.color_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=0, height=40, border_spacing=10, text="Colors",
+                                                   fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
+                                                   image=self.color_image, anchor="w", command=self.color_button_event)
+        self.color_button.grid(row=1, column=0, sticky="ew")
 
         #Delays tab
-        self.tabview.add("Delays")
-        self.tabview.tab("Delays").grid_columnconfigure(0, weight=1)
-        self.label_tab_2 = customtkinter.CTkLabel(self.tabview.tab("Delays"), text="CTkLabel on Delays")
-        self.label_tab_2.grid(row=0, column=0, padx=20, pady=20)
-        self.slider_between = customtkinter.CTkSlider(self.tabview.tab("Delays"), from_=0, to=1000, number_of_steps=1000)
-        self.slider_between.grid(row=2, column=0, padx=(20, 10), pady=(10, 10), sticky="ew")
-        
-        #FOV tab
-        self.tabview.add("FOV")
+        self.frame_2_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=0, height=40, border_spacing=10, text="Delays",
+                                                      fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
+                                                      image=self.chat_image, anchor="w", command=self.frame_2_button_event)
+        self.frame_2_button.grid(row=2, column=0, sticky="ew")
 
-    def open_input_dialog_event(self):
-        dialog = customtkinter.CTkInputDialog(text="Type in a number:", title="CTkInputDialog")
-        print("CTkInputDialog:", dialog.get_input())
+        #Settings tab
+        self.frame_3_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=0, height=40, border_spacing=10, text="Settings",
+                                                      fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
+                                                      image=self.settings_image, anchor="w", command=self.frame_3_button_event)
+        self.frame_3_button.grid(row=3, column=0, sticky="ew")
 
-    def change_appearance_mode_event(self, new_appearance_mode: str):
+        #Brightness mode
+        self.appearance_mode_menu = customtkinter.CTkOptionMenu(self.navigation_frame, values=["Dark", "Light", "System"],
+                                                                command=self.change_appearance_mode_event)
+        self.appearance_mode_menu.grid(row=6, column=0, padx=20, pady=20, sticky="s")
+
+        # create color frame
+        self.color_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.color_frame.grid_columnconfigure(0, weight=1)
+
+
+        # create second frame
+        self.second_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
+
+        # create third frame
+        self.third_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
+
+        # select default frame
+        self.select_frame_by_name("color")
+
+    def select_frame_by_name(self, name):
+        # set button color for selected button
+        self.color_button.configure(fg_color=("gray75", "gray25") if name == "color" else "transparent")
+        self.frame_2_button.configure(fg_color=("gray75", "gray25") if name == "frame_2" else "transparent")
+        self.frame_3_button.configure(fg_color=("gray75", "gray25") if name == "frame_3" else "transparent")
+
+        # show selected frame
+        if name == "color":
+            self.color_frame.grid(row=0, column=1, sticky="nsew")
+        else:
+            self.color_frame.grid_forget()
+        if name == "frame_2":
+            self.second_frame.grid(row=0, column=1, sticky="nsew")
+        else:
+            self.second_frame.grid_forget()
+        if name == "frame_3":
+            self.third_frame.grid(row=0, column=1, sticky="nsew")
+        else:
+            self.third_frame.grid_forget()
+
+    def color_button_event(self):
+        self.select_frame_by_name("color")
+
+    def frame_2_button_event(self):
+        self.select_frame_by_name("frame_2")
+
+    def frame_3_button_event(self):
+        self.select_frame_by_name("frame_3")
+
+    def change_appearance_mode_event(self, new_appearance_mode):
         customtkinter.set_appearance_mode(new_appearance_mode)
-
-    def sidebar_button_event(self):
-        print("sidebar_button click")
-    
-    def hide_window(self):
-            dialog = customtkinter.CTkInputDialog(text="For how long would you like to hide the window?", title="CTkInputDialog")
-            sleepTime = int(dialog.get_input())
-            self.withdraw()
-            time.sleep(sleepTime)
-            self.deiconify()
 
 
 if __name__ == "__main__":
     app = App()
     app.mainloop()
+
