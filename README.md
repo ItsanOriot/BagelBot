@@ -1,9 +1,6 @@
 # BagelBot
-BagelBot is an undetected Rasberry Pi based/2pc triggerbot. It can be used for any game with a colored outline, most notably Valorant and Overwatch
-It runs no software on the host computer and can be built for about $100.
-It should be impossible for any anticheat to ever detect it non-heuristically.
+BagelBot is an (in theory) undetectable triggerbot. It can be used for any game with a colored outline, most notably Valorant and Overwatch.
+It can be built for 1 computer, 2 computers, or a raspberry pi
+Depending on the method, it can be built for 10-150$
+Depending on which method you choose, it should be impossible for any anticheat to ever detect it non-heuristically.
 
-Coming soon:
-- Support with 2 pcs and no Raspberry Pi (happening in a few days when parts arrive)
-- Code rewritten and compiled in Cython for better performance (happening tonight maybe)
-- Maybe aimbot if I can figure it out (will likely take months if I do)
