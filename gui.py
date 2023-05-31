@@ -3,6 +3,9 @@ import os
 from PIL import Image
 import time
 from typing import Union
+import numpy as np
+lowerHSV = np.array([140, 90, 140])
+upperHSV = np.array([150, 159, 255])
 
 class FloatSpinbox(customtkinter.CTkFrame):
     def __init__(self, *args,
@@ -103,15 +106,45 @@ class App(customtkinter.CTk):
                                                    fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
                                                    image=self.color_image, anchor="w", command=self.color_button_event)
         self.color_button.grid(row=1, column=0, sticky="ew")
-        #Hue Upper
-        self.hue_upper_frame = customtkinter.CTkFrame(self.color_frame, corner_radius=0, fg_color="transparent")
-        self.hue_upper_frame.grid(row=2, column=0, padx=10, pady=(10, 0), sticky="nsew")
-        self.hue_upper_label = customtkinter.CTkLabel(self.color_frame, text="Hue Upper Limit")
-        self.hue_upper_label.grid(row=0, column=0, padx=0, pady=5)
-        self.hue_upper_spinbox = FloatSpinbox(self.color_frame, width=150, step_size=3)
+        #Hue TabView
+        self.hue_tabview = customtkinter.CTkTabview(self.color_frame, width=250)
+        self.hue_tabview.grid(row=0, column=0, padx=(20, 20), pady=(20, 0), sticky="nsew")
+        #Upper
+        self.hue_tabview.add("Upper Limit")
+        self.hue_tabview.tab("Upper Limit").grid_columnconfigure(0, weight=1)
+        self.hue_upper_label = customtkinter.CTkLabel(self.hue_tabview.tab("Upper Limit"), text="Hue")
+        self.hue_upper_label.grid(row=0, column=0, padx=0, pady=0)
+        self.hue_upper_spinbox = FloatSpinbox(self.hue_tabview.tab("Upper Limit"), width=150, step_size=1, command=self.hue_upper_spinbox_event)
         self.hue_upper_spinbox.grid(row=1, column=0, padx=0, pady=0)
-        self.hue_upper_spinbox.set(35)
-        #Hue Lower
+        self.hue_upper_spinbox.set(150)
+        self.saturation_upper_label = customtkinter.CTkLabel(self.hue_tabview.tab("Upper Limit"), text="Saturation")
+        self.saturation_upper_label.grid(row=2, column=0, padx=0, pady=15)
+        self.saturation_upper_spinbox = FloatSpinbox(self.hue_tabview.tab("Upper Limit"), width=150, step_size=1, command=self.saturation_upper_spinbox_event)
+        self.saturation_upper_spinbox.grid(row=3, column=0, padx=0, pady=0)
+        self.saturation_upper_spinbox.set(159)
+        self.value_upper_label = customtkinter.CTkLabel(self.hue_tabview.tab("Upper Limit"), text="Value")
+        self.value_upper_label.grid(row=4, column=0, padx=0, pady=15)
+        self.value_upper_spinbox = FloatSpinbox(self.hue_tabview.tab("Upper Limit"), width=150, step_size=1, command=self.value_upper_spinbox_event)
+        self.value_upper_spinbox.grid(row=5, column=0, padx=0, pady=0)
+        self.value_upper_spinbox.set(255)
+        #Lower
+        self.hue_tabview.add("Lower Limit")
+        self.hue_tabview.tab("Lower Limit").grid_columnconfigure(0, weight=1)
+        self.hue_lower_label = customtkinter.CTkLabel(self.hue_tabview.tab("Lower Limit"), text="Hue")
+        self.hue_lower_label.grid(row=0, column=0, padx=0, pady=0)
+        self.hue_lower_spinbox = FloatSpinbox(self.hue_tabview.tab("Lower Limit"), width=150, step_size=1, command=self.hue_lower_spinbox_event)
+        self.hue_lower_spinbox.grid(row=1, column=0, padx=0, pady=0)
+        self.hue_lower_spinbox.set(140)
+        self.saturation_lower_label = customtkinter.CTkLabel(self.hue_tabview.tab("Lower Limit"), text="Saturation")
+        self.saturation_lower_label.grid(row=2, column=0, padx=0, pady=15)
+        self.saturation_lower_spinbox = FloatSpinbox(self.hue_tabview.tab("Lower Limit"), width=150, step_size=1, command=self.saturation_lower_spinbox_event)
+        self.saturation_lower_spinbox.grid(row=3, column=0, padx=0, pady=0)
+        self.saturation_lower_spinbox.set(90)
+        self.value_lower_label = customtkinter.CTkLabel(self.hue_tabview.tab("Lower Limit"), text="Value")
+        self.value_lower_label.grid(row=4, column=0, padx=0, pady=15)
+        self.value_lower_spinbox = FloatSpinbox(self.hue_tabview.tab("Lower Limit"), width=150, step_size=1, command=self.value_lower_spinbox_event)
+        self.value_lower_spinbox.grid(row=5, column=0, padx=0, pady=0)
+        self.value_lower_spinbox.set(140)
 
 
         #Delays tab
@@ -162,7 +195,7 @@ class App(customtkinter.CTk):
             self.third_frame.grid(row=0, column=1, sticky="nsew")
         else:
             self.third_frame.grid_forget()
-
+    
     def color_button_event(self):
         self.select_frame_by_name("color")
 
@@ -171,6 +204,34 @@ class App(customtkinter.CTk):
 
     def frame_3_button_event(self):
         self.select_frame_by_name("frame_3")
+
+    #upper spinbox events
+    def hue_upper_spinbox_event(self):
+        if self.hue_upper_spinbox.get() > 179:
+            self.hue_upper_spinbox.set(179)
+        upperHSV[0] = self.hue_upper_spinbox.get()
+    def saturation_upper_spinbox_event(self):
+        if self.saturation_upper_spinbox.get() > 255:
+            self.saturation_upper_spinbox.set(255)
+        upperHSV[1] = self.saturation_upper_spinbox.get()
+    def value_upper_spinbox_event(self):
+        if self.value_upper_spinbox.get() > 255:
+            self.value_upper_spinbox.set(255)
+        upperHSV[2] = self.value_upper_spinbox.get()
+
+    #lower spinbox events
+    def hue_lower_spinbox_event(self):
+        if self.hue_lower_spinbox.get() > 179:
+            self.hue_lower_spinbox.set(179)
+        lowerHSV[0] = self.hue_lower_spinbox.get()
+    def saturation_lower_spinbox_event(self):
+        if self.saturation_lower_spinbox.get() > 255:
+            self.saturation_lower_spinbox.set(255)
+        lowerHSV[1] = self.saturation_lower_spinbox.get()
+    def value_lower_spinbox_event(self):
+        if self.value_lower_spinbox.get() > 255:
+            self.value_lower_spinbox.set(255)
+        lowerHSV[2] = self.value_lower_spinbox.get()
 
     def change_appearance_mode_event(self, new_appearance_mode):
         customtkinter.set_appearance_mode(new_appearance_mode)
