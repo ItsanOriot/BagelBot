@@ -2,6 +2,68 @@ import customtkinter
 import os
 from PIL import Image
 import time
+from typing import Union
+
+class FloatSpinbox(customtkinter.CTkFrame):
+    def __init__(self, *args,
+                 width: int = 100,
+                 height: int = 32,
+                 step_size: Union[int, float] = 1,
+                 command: callable = None,
+                 **kwargs):
+        super().__init__(*args, width=width, height=height, **kwargs)
+
+        self.step_size = step_size
+        self.command = command
+
+        self.configure(fg_color=("gray78", "gray28"))  # set frame color
+
+        self.grid_columnconfigure((0, 2), weight=0)  # buttons don't expand
+        self.grid_columnconfigure(1, weight=1)  # entry expands
+
+        self.subtract_button = customtkinter.CTkButton(self, text="-", width=height-6, height=height-6,
+                                                       command=self.subtract_button_callback)
+        self.subtract_button.grid(row=0, column=0, padx=(3, 0), pady=3)
+
+        self.entry = customtkinter.CTkEntry(self, width=width-(2*height), height=height-6, border_width=0)
+        self.entry.grid(row=0, column=1, columnspan=1, padx=3, pady=3, sticky="ew")
+
+        self.add_button = customtkinter.CTkButton(self, text="+", width=height-6, height=height-6,
+                                                  command=self.add_button_callback)
+        self.add_button.grid(row=0, column=2, padx=(0, 3), pady=3)
+
+        # default value
+        self.entry.insert(0, "0.0")
+
+    def add_button_callback(self):
+        if self.command is not None:
+            self.command()
+        try:
+            value = float(self.entry.get()) + self.step_size
+            self.entry.delete(0, "end")
+            self.entry.insert(0, value)
+        except ValueError:
+            return
+
+    def subtract_button_callback(self):
+        if self.command is not None:
+            self.command()
+        try:
+            value = float(self.entry.get()) - self.step_size
+            self.entry.delete(0, "end")
+            self.entry.insert(0, value)
+        except ValueError:
+            return
+
+    def get(self) -> Union[float, None]:
+        try:
+            return float(self.entry.get())
+        except ValueError:
+            return None
+
+    def set(self, value: float):
+        self.entry.delete(0, "end")
+        self.entry.insert(0, str(float(value)))
 
 
 class App(customtkinter.CTk):
@@ -10,6 +72,7 @@ class App(customtkinter.CTk):
 
         self.title("bagelbot.py")
         self.geometry("600x350")
+        customtkinter.set_appearance_mode("Dark")
 
         # set grid layout 1x2
         self.grid_rowconfigure(0, weight=1)
@@ -17,9 +80,9 @@ class App(customtkinter.CTk):
 
         # load images with light and dark mode image
         self.logo_image = customtkinter.CTkImage(light_image=Image.open("logoLight.png"), dark_image=Image.open("logoDark.png"), size=(150, 26))
-        self.color_image = customtkinter.CTkImage(light_image=Image.open("colorLight.png"), dark_image=Image.open("colorDark.png"), size=(40, 40))
-        self.chat_image = customtkinter.CTkImage(light_image=Image.open("timeLight.png"), dark_image=Image.open("timeDark.png"), size=(30, 30))
-        self.settings_image = customtkinter.CTkImage(light_image=Image.open("settingsLight.png"), dark_image=Image.open("settingsDark.png"), size=(30, 30))
+        self.color_image = customtkinter.CTkImage(light_image=Image.open("colorLight.png"), dark_image=Image.open("colorDark.png"), size=(50, 50))
+        self.chat_image = customtkinter.CTkImage(light_image=Image.open("timeLight.png"), dark_image=Image.open("timeDark.png"), size=(35, 35))
+        self.settings_image = customtkinter.CTkImage(light_image=Image.open("settingsLight.png"), dark_image=Image.open("settingsDark.png"), size=(35, 35))
 
         # create navigation frame
         self.navigation_frame = customtkinter.CTkFrame(self, corner_radius=0)
@@ -33,19 +96,36 @@ class App(customtkinter.CTk):
 
 
         #Colors tab
-        self.color_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=0, height=40, border_spacing=10, text="Colors",
+        # create color frame
+        self.color_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.color_frame.grid_columnconfigure(0, weight=1)
+        self.color_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=10, height=40, border_spacing=10, text="Colors",
                                                    fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
                                                    image=self.color_image, anchor="w", command=self.color_button_event)
         self.color_button.grid(row=1, column=0, sticky="ew")
+        #Hue Upper
+        self.hue_upper_frame = customtkinter.CTkFrame(self.color_frame, corner_radius=0, fg_color="transparent")
+        self.hue_upper_frame.grid(row=2, column=0, padx=10, pady=(10, 0), sticky="nsew")
+        self.hue_upper_label = customtkinter.CTkLabel(self.color_frame, text="Hue Upper Limit")
+        self.hue_upper_label.grid(row=0, column=0, padx=0, pady=5)
+        self.hue_upper_spinbox = FloatSpinbox(self.color_frame, width=150, step_size=3)
+        self.hue_upper_spinbox.grid(row=1, column=0, padx=0, pady=0)
+        self.hue_upper_spinbox.set(35)
+        #Hue Lower
+
 
         #Delays tab
-        self.frame_2_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=0, height=40, border_spacing=10, text="Delays",
+        # create delays frame
+        self.second_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.frame_2_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=10, height=40, border_spacing=10, text="Delays",
                                                       fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
                                                       image=self.chat_image, anchor="w", command=self.frame_2_button_event)
         self.frame_2_button.grid(row=2, column=0, sticky="ew")
 
         #Settings tab
-        self.frame_3_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=0, height=40, border_spacing=10, text="Settings",
+        # create settings frame
+        self.third_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.frame_3_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=10, height=40, border_spacing=10, text="Settings",
                                                       fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
                                                       image=self.settings_image, anchor="w", command=self.frame_3_button_event)
         self.frame_3_button.grid(row=3, column=0, sticky="ew")
@@ -53,18 +133,12 @@ class App(customtkinter.CTk):
         #Brightness mode
         self.appearance_mode_menu = customtkinter.CTkOptionMenu(self.navigation_frame, values=["Dark", "Light", "System"],
                                                                 command=self.change_appearance_mode_event)
-        self.appearance_mode_menu.grid(row=6, column=0, padx=20, pady=20, sticky="s")
+        self.appearance_mode_menu.grid(row=6, column=0, padx=20, pady=10, sticky="s")
 
-        # create color frame
-        self.color_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
-        self.color_frame.grid_columnconfigure(0, weight=1)
-
-
-        # create second frame
-        self.second_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
-
-        # create third frame
-        self.third_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        #Scaling size
+        self.scaling_optionemenu = customtkinter.CTkOptionMenu(self.navigation_frame, values=["100%", "125%", "150%", "175%", "200%"],
+                                                               command=self.change_scaling_event)
+        self.scaling_optionemenu.grid(row=8, column=0, padx=20, pady=(0, 20))
 
         # select default frame
         self.select_frame_by_name("color")
@@ -100,6 +174,10 @@ class App(customtkinter.CTk):
 
     def change_appearance_mode_event(self, new_appearance_mode):
         customtkinter.set_appearance_mode(new_appearance_mode)
+    
+    def change_scaling_event(self, new_scaling: str):
+        new_scaling_float = int(new_scaling.replace("%", "")) / 100
+        customtkinter.set_widget_scaling(new_scaling_float)
 
 
 if __name__ == "__main__":
