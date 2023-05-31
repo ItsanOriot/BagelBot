@@ -8,6 +8,7 @@ import numpy as np
 import cv2
 import dxcam
 from win32api import GetSystemMetrics
+import keyboard
 
 fov = 20
 width = GetSystemMetrics (0)
@@ -28,8 +29,6 @@ camera.start(target_fps=targetFPS)
 m1 = digitalio.DigitalInOut(board.C0)
 m1.direction = digitalio.Direction.OUTPUT
 m1.value = True
-button = digitalio.DigitalInOut(board.C4)
-button.direction = digitalio.Direction.INPUT
 
 
 #the function which scans an image for purple
@@ -42,7 +41,7 @@ def scan(image):
 
 while True:
     if scan(np.array(camera.get_latest_frame())):
-        if (not button.value):
+        if keyboard.is_pressed("F22"):
             print("click")
             m1.value = False
             time.sleep(0.1 * random.random())
