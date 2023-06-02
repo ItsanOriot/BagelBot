@@ -4,8 +4,11 @@ from PIL import Image
 import time
 from typing import Union
 import numpy as np
+
 lowerHSV = np.array([140, 90, 140])
 upperHSV = np.array([150, 159, 255])
+fov = 15
+bind = "alt"
 
 class FloatSpinbox(customtkinter.CTkFrame):
     def __init__(self, *args,
@@ -74,7 +77,7 @@ class App(customtkinter.CTk):
         super().__init__()
 
         self.title("bagelbot.py")
-        self.geometry("600x350")
+        self.geometry("600x360")
         customtkinter.set_appearance_mode("Dark")
 
         # set grid layout 1x2
@@ -127,6 +130,11 @@ class App(customtkinter.CTk):
         self.value_upper_spinbox = FloatSpinbox(self.hue_tabview.tab("Upper Limit"), width=150, step_size=1, command=self.value_upper_spinbox_event)
         self.value_upper_spinbox.grid(row=5, column=0, padx=0, pady=0)
         self.value_upper_spinbox.set(255)
+        #Upper Preview
+        self.upper_preview_label = customtkinter.CTkLabel(self.hue_tabview.tab("Upper Limit"), text="Upper Limit Preview")
+        self.upper_preview_label.grid(row=2, column=3, padx=0, pady=0)
+        self.upper_preview_frame = customtkinter.CTkFrame(self.hue_tabview.tab("Upper Limit"), width=75, height=75, corner_radius=2, fg_color="black", border_color="black")
+        self.upper_preview_frame.grid(row=3, column=3, padx=50, pady=0)
         #Lower
         self.hue_tabview.add("Lower Limit")
         self.hue_tabview.tab("Lower Limit").grid_columnconfigure(0, weight=1)
@@ -162,6 +170,17 @@ class App(customtkinter.CTk):
                                                       fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
                                                       image=self.settings_image, anchor="w", command=self.frame_3_button_event)
         self.frame_3_button.grid(row=3, column=0, sticky="ew")
+        #fov spinbox
+        self.fov_label = customtkinter.CTkLabel(self.third_frame, text="FOV")
+        self.fov_label.grid(row=0, column=0, padx=20, pady=0)
+        self.fov_spinbox = FloatSpinbox(self.third_frame, width=150, step_size=1, command=self.fov_spinbox_event)
+        self.fov_spinbox.grid(row=1, column=0, padx=20, pady=0)
+        self.fov_spinbox.set(15)
+        #Keybind window
+        self.bind_label = customtkinter.CTkLabel(self.third_frame, text=("Current Keybind: " + bind))
+        self.bind_label.grid(row=0, column=2, padx=20, pady=0)
+        self.bind_button = customtkinter.CTkButton(self.third_frame, text="Change Keybind", command=self.bind_button_click_event)
+        self.bind_button.grid(row=1, column=2, padx=20, pady=0)
 
         #Brightness mode
         self.appearance_mode_menu = customtkinter.CTkOptionMenu(self.navigation_frame, values=["Dark", "Light", "System"],
@@ -232,6 +251,17 @@ class App(customtkinter.CTk):
         if self.value_lower_spinbox.get() > 255:
             self.value_lower_spinbox.set(255)
         lowerHSV[2] = self.value_lower_spinbox.get()
+    
+    def fov_spinbox_event(self):
+        if self.fov_spinbox.get() < 1:
+            self.fov_spinbox.set(1)
+        fov = self.fov_spinbox.get()
+
+    def bind_button_click_event(self):
+        dialog = customtkinter.CTkInputDialog(text="Which Key Would you like to use? Special keys must be spelled out. Ex: F5, ctrl, alt", title="Test")
+        bind = dialog.get_input()
+        print(bind)
+        self.bind_label.configure(text=("Current Keybind: " + bind))
 
     def change_appearance_mode_event(self, new_appearance_mode):
         customtkinter.set_appearance_mode(new_appearance_mode)
