@@ -4,11 +4,17 @@ from PIL import Image
 import time
 from typing import Union
 import numpy as np
+import cv2
 
 lowerHSV = np.array([140, 90, 140])
 upperHSV = np.array([150, 159, 255])
 fov = 15
 bind = "alt"
+
+def hsv_to_hex(hsv):
+    h, s, v = float(hsv[0]), float(hsv[1]), float(hsv[2])
+    r, g, b = cv2.cvtColor(np.uint8([[[h, s, v]]]), cv2.COLOR_HSV2RGB)[0][0]
+    return '#%02x%02x%02x' % (r, g, b)
 
 class FloatSpinbox(customtkinter.CTkFrame):
     def __init__(self, *args,
@@ -121,19 +127,19 @@ class App(customtkinter.CTk):
         self.hue_upper_spinbox.grid(row=1, column=0, padx=0, pady=0)
         self.hue_upper_spinbox.set(150)
         self.saturation_upper_label = customtkinter.CTkLabel(self.hue_tabview.tab("Upper Limit"), text="Saturation")
-        self.saturation_upper_label.grid(row=2, column=0, padx=0, pady=15)
+        self.saturation_upper_label.grid(row=2, column=0, padx=0, pady=0)
         self.saturation_upper_spinbox = FloatSpinbox(self.hue_tabview.tab("Upper Limit"), width=150, step_size=1, command=self.saturation_upper_spinbox_event)
         self.saturation_upper_spinbox.grid(row=3, column=0, padx=0, pady=0)
         self.saturation_upper_spinbox.set(159)
         self.value_upper_label = customtkinter.CTkLabel(self.hue_tabview.tab("Upper Limit"), text="Value")
-        self.value_upper_label.grid(row=4, column=0, padx=0, pady=15)
+        self.value_upper_label.grid(row=4, column=0, padx=0, pady=0)
         self.value_upper_spinbox = FloatSpinbox(self.hue_tabview.tab("Upper Limit"), width=150, step_size=1, command=self.value_upper_spinbox_event)
         self.value_upper_spinbox.grid(row=5, column=0, padx=0, pady=0)
         self.value_upper_spinbox.set(255)
         #Upper Preview
         self.upper_preview_label = customtkinter.CTkLabel(self.hue_tabview.tab("Upper Limit"), text="Upper Limit Preview")
         self.upper_preview_label.grid(row=2, column=3, padx=0, pady=0)
-        self.upper_preview_frame = customtkinter.CTkFrame(self.hue_tabview.tab("Upper Limit"), width=75, height=75, corner_radius=2, fg_color="black", border_color="black")
+        self.upper_preview_frame = customtkinter.CTkFrame(self.hue_tabview.tab("Upper Limit"), width=75, height=75, corner_radius=4, fg_color=hsv_to_hex(upperHSV), border_color="black")
         self.upper_preview_frame.grid(row=3, column=3, padx=50, pady=0)
         #Lower
         self.hue_tabview.add("Lower Limit")
@@ -144,15 +150,20 @@ class App(customtkinter.CTk):
         self.hue_lower_spinbox.grid(row=1, column=0, padx=0, pady=0)
         self.hue_lower_spinbox.set(140)
         self.saturation_lower_label = customtkinter.CTkLabel(self.hue_tabview.tab("Lower Limit"), text="Saturation")
-        self.saturation_lower_label.grid(row=2, column=0, padx=0, pady=15)
+        self.saturation_lower_label.grid(row=2, column=0, padx=0, pady=0)
         self.saturation_lower_spinbox = FloatSpinbox(self.hue_tabview.tab("Lower Limit"), width=150, step_size=1, command=self.saturation_lower_spinbox_event)
         self.saturation_lower_spinbox.grid(row=3, column=0, padx=0, pady=0)
         self.saturation_lower_spinbox.set(90)
         self.value_lower_label = customtkinter.CTkLabel(self.hue_tabview.tab("Lower Limit"), text="Value")
-        self.value_lower_label.grid(row=4, column=0, padx=0, pady=15)
+        self.value_lower_label.grid(row=4, column=0, padx=0, pady=0)
         self.value_lower_spinbox = FloatSpinbox(self.hue_tabview.tab("Lower Limit"), width=150, step_size=1, command=self.value_lower_spinbox_event)
         self.value_lower_spinbox.grid(row=5, column=0, padx=0, pady=0)
         self.value_lower_spinbox.set(140)
+        #Lower Preview
+        self.lower_preview_label = customtkinter.CTkLabel(self.hue_tabview.tab("Lower Limit"), text="Lower Limit Preview")
+        self.lower_preview_label.grid(row=2, column=3, padx=0, pady=0)
+        self.lower_preview_frame = customtkinter.CTkFrame(self.hue_tabview.tab("Lower Limit"), width=75, height=75, corner_radius=4, fg_color=hsv_to_hex(lowerHSV), border_color="black")
+        self.lower_preview_frame.grid(row=3, column=3, padx=50, pady=0)
 
 
         #Delays tab
@@ -176,6 +187,9 @@ class App(customtkinter.CTk):
         self.fov_spinbox = FloatSpinbox(self.third_frame, width=150, step_size=1, command=self.fov_spinbox_event)
         self.fov_spinbox.grid(row=1, column=0, padx=20, pady=0)
         self.fov_spinbox.set(15)
+        self.fov_preview_frame = customtkinter.CTkFrame(self.third_frame, width=fov, height=fov, corner_radius=0, fg_color="transparent", border_color="#00FF00", border_width=1)
+        self.fov_preview_frame.grid(row=2, column=0, padx=0, pady=10)
+        
         #Keybind window
         self.bind_label = customtkinter.CTkLabel(self.third_frame, text=("Current Keybind: " + bind))
         self.bind_label.grid(row=0, column=2, padx=20, pady=0)
@@ -229,33 +243,40 @@ class App(customtkinter.CTk):
         if self.hue_upper_spinbox.get() > 179:
             self.hue_upper_spinbox.set(179)
         upperHSV[0] = self.hue_upper_spinbox.get()
+        self.upper_preview_frame.configure(fg_color=hsv_to_hex(upperHSV))
     def saturation_upper_spinbox_event(self):
         if self.saturation_upper_spinbox.get() > 255:
             self.saturation_upper_spinbox.set(255)
         upperHSV[1] = self.saturation_upper_spinbox.get()
+        self.upper_preview_frame.configure(fg_color=hsv_to_hex(upperHSV))
     def value_upper_spinbox_event(self):
         if self.value_upper_spinbox.get() > 255:
             self.value_upper_spinbox.set(255)
         upperHSV[2] = self.value_upper_spinbox.get()
+        self.upper_preview_frame.configure(fg_color=hsv_to_hex(upperHSV))
 
     #lower spinbox events
     def hue_lower_spinbox_event(self):
         if self.hue_lower_spinbox.get() > 179:
             self.hue_lower_spinbox.set(179)
         lowerHSV[0] = self.hue_lower_spinbox.get()
+        self.lower_preview_frame.configure(fg_color=hsv_to_hex(lowerHSV))
     def saturation_lower_spinbox_event(self):
         if self.saturation_lower_spinbox.get() > 255:
             self.saturation_lower_spinbox.set(255)
         lowerHSV[1] = self.saturation_lower_spinbox.get()
+        self.lower_preview_frame.configure(fg_color=hsv_to_hex(lowerHSV))
     def value_lower_spinbox_event(self):
         if self.value_lower_spinbox.get() > 255:
             self.value_lower_spinbox.set(255)
         lowerHSV[2] = self.value_lower_spinbox.get()
+        self.lower_preview_frame.configure(fg_color=hsv_to_hex(lowerHSV))
     
     def fov_spinbox_event(self):
         if self.fov_spinbox.get() < 1:
             self.fov_spinbox.set(1)
         fov = self.fov_spinbox.get()
+        self.fov_preview_frame.configure(width=fov, height=fov)
 
     def bind_button_click_event(self):
         dialog = customtkinter.CTkInputDialog(text="Which Key Would you like to use? Special keys must be spelled out. Ex: F5, ctrl, alt", title="Test")
