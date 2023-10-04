@@ -1,20 +1,73 @@
+#imports
 import customtkinter
-import os
 from PIL import Image
 import time
 from typing import Union
 import numpy as np
 import cv2
+import os
+#os.environ["BLINKA_FT232H"] = "1"
+#import board
+#import digitalio
+import random
+import dxcam
+from win32api import GetSystemMetrics
+import keyboard
+import asyncio
+import multiprocessing
 
+#settings
+triggerFov = 15
+aimFov = 15
+width = GetSystemMetrics (0)
+height = GetSystemMetrics (1)
+maxFov = max(triggerFov,aimFov)
+left, top = (width - maxFov) // 2, (height - maxFov) // 2
+right, bottom = left + maxFov, top + maxFov
+region = (left, top, right, bottom)
+camera = dxcam.create(output_idx=0, region = region, output_color="BGR")
+camera.start(target_fps=100)
+delayPreUpper = 0
+delayPreLower = 0
+delayBetweenUpper = 0.3
+delayBetweenLower = 0.2
+delayHoldUpper = 0.08
+delayHoldLower = 0.04
+bind = "F22"
 lowerHSV = np.array([140, 90, 140])
 upperHSV = np.array([150, 159, 255])
-fov = 15
-bind = "alt"
+
+def update_cam():
+    print("update")
+    left, top = (width - maxFov) // 2, (height - maxFov) // 2
+    right, bottom = left + maxFov, top + maxFov
+    region = (int(left), int(top), int(right), int(bottom))
+    global camera
+    camera.stop()
+    del camera
+    camera = dxcam.create(output_idx=0, region = region, output_color="BGR")
+    camera.start()
+
 
 def hsv_to_hex(hsv):
     h, s, v = float(hsv[0]), float(hsv[1]), float(hsv[2])
     r, g, b = cv2.cvtColor(np.uint8([[[h, s, v]]]), cv2.COLOR_HSV2RGB)[0][0]
     return '#%02x%02x%02x' % (r, g, b)
+
+def scan(image):
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(hsv, lowerHSV, upperHSV)
+    return mask
+
+async def image_processing(queue):
+    while True:
+        await asyncio.sleep(0.05)
+        image = np.array(camera.get_latest_frame())
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv, lowerHSV, upperHSV)
+        
+        # Put the processed image in the queue
+        await queue.put(mask)
 
 class FloatSpinbox(customtkinter.CTkFrame):
     def __init__(self, *args,
@@ -127,7 +180,7 @@ class App(customtkinter.CTk):
         self.hue_upper_spinbox.grid(row=1, column=0, padx=0, pady=0)
         self.hue_upper_spinbox.set(150)
         self.saturation_upper_label = customtkinter.CTkLabel(self.hue_tabview.tab("Upper Limit"), text="Saturation")
-        self.saturation_upper_label.grid(row=2, column=0, padx=0, pady=0)
+        self.saturation_upper_label.grid(row=3, column=0, padx=0, pady=(0,65))
         self.saturation_upper_spinbox = FloatSpinbox(self.hue_tabview.tab("Upper Limit"), width=150, step_size=1, command=self.saturation_upper_spinbox_event)
         self.saturation_upper_spinbox.grid(row=3, column=0, padx=0, pady=0)
         self.saturation_upper_spinbox.set(159)
@@ -150,7 +203,7 @@ class App(customtkinter.CTk):
         self.hue_lower_spinbox.grid(row=1, column=0, padx=0, pady=0)
         self.hue_lower_spinbox.set(140)
         self.saturation_lower_label = customtkinter.CTkLabel(self.hue_tabview.tab("Lower Limit"), text="Saturation")
-        self.saturation_lower_label.grid(row=2, column=0, padx=0, pady=0)
+        self.saturation_lower_label.grid(row=3, column=0, padx=0, pady=(0,65))
         self.saturation_lower_spinbox = FloatSpinbox(self.hue_tabview.tab("Lower Limit"), width=150, step_size=1, command=self.saturation_lower_spinbox_event)
         self.saturation_lower_spinbox.grid(row=3, column=0, padx=0, pady=0)
         self.saturation_lower_spinbox.set(90)
@@ -166,14 +219,54 @@ class App(customtkinter.CTk):
         self.lower_preview_frame.grid(row=3, column=3, padx=50, pady=0)
 
 
-        #Delays tab
-        # create delays frame
+        #Triggerbot tab
+        # create triggerbot frame
         self.second_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
-        self.frame_2_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=10, height=40, border_spacing=10, text="Delays",
+        self.frame_2_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=10, height=40, border_spacing=10, text="Triggerbot",
                                                       fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
                                                       image=self.chat_image, anchor="w", command=self.frame_2_button_event)
         self.frame_2_button.grid(row=2, column=0, sticky="ew")
 
+        #Delay TabView
+        self.delay_tabview = customtkinter.CTkTabview(self.second_frame, width=250)
+        self.delay_tabview.grid(row=0, column=0, padx=(75, 20), pady=(20, 0), sticky="nsew")
+        #Upper
+        self.delay_tabview.add("Upper Limit")
+        self.delay_tabview.tab("Upper Limit").grid_columnconfigure(0, weight=1)
+        self.pre_upper_label = customtkinter.CTkLabel(self.delay_tabview.tab("Upper Limit"), text="Delay (ms)")
+        self.pre_upper_label.grid(row=0, column=0, padx=0, pady=0)
+        self.pre_upper_spinbox = FloatSpinbox(self.delay_tabview.tab("Upper Limit"), width=150, step_size=1, command=self.pre_upper_spinbox_event)
+        self.pre_upper_spinbox.grid(row=1, column=0, padx=0, pady=(0,15))
+        self.pre_upper_spinbox.set(50)
+        self.post_upper_label = customtkinter.CTkLabel(self.delay_tabview.tab("Upper Limit"), text="Time Between Shots (ms)")
+        self.post_upper_label.grid(row=2, column=0, padx=0, pady=0)
+        self.post_upper_spinbox = FloatSpinbox(self.delay_tabview.tab("Upper Limit"), width=150, step_size=1, command=self.post_upper_spinbox_event)
+        self.post_upper_spinbox.grid(row=3, column=0, padx=0, pady=(0,15))
+        self.post_upper_spinbox.set(300)
+        self.hold_upper_label = customtkinter.CTkLabel(self.delay_tabview.tab("Upper Limit"), text="Mouse Hold Time (ms)")
+        self.hold_upper_label.grid(row=4, column=0, padx=0, pady=0)
+        self.hold_upper_spinbox = FloatSpinbox(self.delay_tabview.tab("Upper Limit"), width=150, step_size=1, command=self.hold_upper_spinbox_event)
+        self.hold_upper_spinbox.grid(row=5, column=0, padx=0, pady=(0,15))
+        self.hold_upper_spinbox.set(50)
+        #Lower
+        self.delay_tabview.add("Lower Limit")
+        self.delay_tabview.tab("Lower Limit").grid_columnconfigure(0, weight=1)
+        self.pre_lower_label = customtkinter.CTkLabel(self.delay_tabview.tab("Lower Limit"), text="Delay (ms)")
+        self.pre_lower_label.grid(row=0, column=0, padx=0, pady=0)
+        self.pre_lower_spinbox = FloatSpinbox(self.delay_tabview.tab("Lower Limit"), width=150, step_size=1, command=self.pre_lower_spinbox_event)
+        self.pre_lower_spinbox.grid(row=1, column=0, padx=0, pady=0)
+        self.pre_lower_spinbox.set(50)
+        self.post_lower_label = customtkinter.CTkLabel(self.delay_tabview.tab("Lower Limit"), text="Time Between Shots (ms)")
+        self.post_lower_label.grid(row=2, column=0, padx=0, pady=0)
+        self.post_lower_spinbox = FloatSpinbox(self.delay_tabview.tab("Lower Limit"), width=150, step_size=1, command=self.post_lower_spinbox_event)
+        self.post_lower_spinbox.grid(row=3, column=0, padx=0, pady=0)
+        self.post_lower_spinbox.set(200)
+        self.hold_lower_label = customtkinter.CTkLabel(self.delay_tabview.tab("Lower Limit"), text="Mouse Hold Time (ms)")
+        self.hold_lower_label.grid(row=4, column=0, padx=0, pady=0)
+        self.hold_lower_spinbox = FloatSpinbox(self.delay_tabview.tab("Lower Limit"), width=150, step_size=1, command=self.hold_lower_spinbox_event)
+        self.hold_lower_spinbox.grid(row=5, column=0, padx=0, pady=0)
+        self.hold_lower_spinbox.set(20)
+        
         #Settings tab
         # create settings frame
         self.third_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
@@ -181,20 +274,32 @@ class App(customtkinter.CTk):
                                                       fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
                                                       image=self.settings_image, anchor="w", command=self.frame_3_button_event)
         self.frame_3_button.grid(row=3, column=0, sticky="ew")
-        #fov spinbox
-        self.fov_label = customtkinter.CTkLabel(self.third_frame, text="FOV")
-        self.fov_label.grid(row=0, column=0, padx=20, pady=0)
-        self.fov_spinbox = FloatSpinbox(self.third_frame, width=150, step_size=1, command=self.fov_spinbox_event)
-        self.fov_spinbox.grid(row=1, column=0, padx=20, pady=0)
-        self.fov_spinbox.set(15)
-        self.fov_preview_frame = customtkinter.CTkFrame(self.third_frame, width=fov, height=fov, corner_radius=0, fg_color="transparent", border_color="#00FF00", border_width=1)
-        self.fov_preview_frame.grid(row=2, column=0, padx=0, pady=10)
+        #fov spinboxes
+        self.trigger_fov_label = customtkinter.CTkLabel(self.third_frame, text="Triggerbot FOV")
+        self.trigger_fov_label.grid(row=0, column=0, padx=20, pady=0)
+        self.trigger_fov_spinbox = FloatSpinbox(self.third_frame, width=150, step_size=1, command=self.trigger_fov_spinbox_event)
+        self.trigger_fov_spinbox.grid(row=1, column=0, padx=20, pady=0)
+        self.trigger_fov_spinbox.set(15)
+        self.trigger_fov_preview_frame = customtkinter.CTkFrame(self.third_frame, width=maxFov, height=maxFov, corner_radius=0, fg_color="transparent", border_color="#00FF00", border_width=1)
+        self.trigger_fov_preview_frame.grid(row=2, column=0, padx=0, pady=10)
+
+        self.aim_fov_label = customtkinter.CTkLabel(self.third_frame, text="Aimbot FOV")
+        self.aim_fov_label.grid(row=0, column=2, padx=20, pady=0)
+        self.aim_fov_spinbox = FloatSpinbox(self.third_frame, width=150, step_size=1, command=self.aim_fov_spinbox_event)
+        self.aim_fov_spinbox.grid(row=1, column=2, padx=20, pady=0)
+        self.aim_fov_spinbox.set(15)
+        self.aim_fov_preview_frame = customtkinter.CTkFrame(self.third_frame, width=maxFov, height=maxFov, corner_radius=0, fg_color="transparent", border_color="#00FF00", border_width=1)
+        self.aim_fov_preview_frame.grid(row=2, column=2, padx=0, pady=10)
         
         #Keybind window
         self.bind_label = customtkinter.CTkLabel(self.third_frame, text=("Current Keybind: " + bind))
-        self.bind_label.grid(row=0, column=2, padx=20, pady=0)
+        self.bind_label.grid(row=4, column=0, padx=20, pady=0)
         self.bind_button = customtkinter.CTkButton(self.third_frame, text="Change Keybind", command=self.bind_button_click_event)
-        self.bind_button.grid(row=1, column=2, padx=20, pady=0)
+        self.bind_button.grid(row=5, column=0, padx=20, pady=0)
+
+        #Masking Preview
+        self.bind_button = customtkinter.CTkButton(self.third_frame, text="Preview Masking", command=self.preview_mask_click_event)
+        self.bind_button.grid(row=3, column=0, padx=20, pady=0)
 
         #Brightness mode
         self.appearance_mode_menu = customtkinter.CTkOptionMenu(self.navigation_frame, values=["Dark", "Light", "System"],
@@ -238,51 +343,111 @@ class App(customtkinter.CTk):
     def frame_3_button_event(self):
         self.select_frame_by_name("frame_3")
 
-    #upper spinbox events
+    #upper hsv spinbox events
     def hue_upper_spinbox_event(self):
         if self.hue_upper_spinbox.get() > 179:
             self.hue_upper_spinbox.set(179)
+        if self.hue_upper_spinbox.get() <= self.hue_lower_spinbox.get():
+            self.hue_upper_spinbox.set(self.hue_lower_spinbox.get() + 1)
         upperHSV[0] = self.hue_upper_spinbox.get()
         self.upper_preview_frame.configure(fg_color=hsv_to_hex(upperHSV))
     def saturation_upper_spinbox_event(self):
         if self.saturation_upper_spinbox.get() > 255:
             self.saturation_upper_spinbox.set(255)
+        if self.saturation_upper_spinbox.get() <= self.saturation_lower_spinbox.get():
+            self.saturation_upper_spinbox.set(self.saturation_lower_spinbox.get() + 1)
         upperHSV[1] = self.saturation_upper_spinbox.get()
         self.upper_preview_frame.configure(fg_color=hsv_to_hex(upperHSV))
     def value_upper_spinbox_event(self):
         if self.value_upper_spinbox.get() > 255:
             self.value_upper_spinbox.set(255)
+        if self.value_upper_spinbox.get() <= self.value_lower_spinbox.get():
+            self.value_upper_spinbox.set(self.value_lower_spinbox.get() + 1)
         upperHSV[2] = self.value_upper_spinbox.get()
         self.upper_preview_frame.configure(fg_color=hsv_to_hex(upperHSV))
 
-    #lower spinbox events
+    #lower hsv spinbox events
     def hue_lower_spinbox_event(self):
         if self.hue_lower_spinbox.get() > 179:
             self.hue_lower_spinbox.set(179)
+        if self.hue_lower_spinbox.get() >= self.hue_upper_spinbox.get():
+            self.hue_lower_spinbox.set(self.hue_upper_spinbox.get() - 1)
         lowerHSV[0] = self.hue_lower_spinbox.get()
         self.lower_preview_frame.configure(fg_color=hsv_to_hex(lowerHSV))
     def saturation_lower_spinbox_event(self):
         if self.saturation_lower_spinbox.get() > 255:
             self.saturation_lower_spinbox.set(255)
+        if self.saturation_lower_spinbox.get() >= self.saturation_upper_spinbox.get():
+            self.saturation_lower_spinbox.set(self.saturation_upper_spinbox.get() - 1)
         lowerHSV[1] = self.saturation_lower_spinbox.get()
         self.lower_preview_frame.configure(fg_color=hsv_to_hex(lowerHSV))
     def value_lower_spinbox_event(self):
         if self.value_lower_spinbox.get() > 255:
             self.value_lower_spinbox.set(255)
+        if self.value_lower_spinbox.get() >= self.value_upper_spinbox.get():
+            self.value_lower_spinbox.set(self.value_upper_spinbox.get() - 1)
         lowerHSV[2] = self.value_lower_spinbox.get()
         self.lower_preview_frame.configure(fg_color=hsv_to_hex(lowerHSV))
+
+    #upper delay spinbox events
+    def pre_upper_spinbox_event(self):
+        if self.pre_upper_spinbox.get() < self.pre_lower_spinbox.get():
+            self.pre_upper_spinbox.set(self.pre_lower_spinbox.get())
+        delayPreUpper = self.pre_upper_spinbox.get() - 50
+    def post_upper_spinbox_event(self):
+        if self.post_upper_spinbox.get() <= self.post_lower_spinbox.get():
+            self.post_upper_spinbox.set(self.post_lower_spinbox.get() + 1)
+        delayPostUpper = self.post_upper_spinbox.get()
+    def hold_upper_spinbox_event(self):
+        if self.hold_upper_spinbox.get() <= self.hold_lower_spinbox.get():
+            self.hold_upper_spinbox.set(self.hold_lower_spinbox.get() + 1)
+        delayHoldUpper = self.hold_upper_spinbox.get()
+
+    #lower delay spinbox events
+    def pre_lower_spinbox_event(self):
+        if self.pre_lower_spinbox.get() < 0:
+            self.pre_lower_spinbox.set(0)
+        if self.pre_lower_spinbox.get() >= self.pre_lower_spinbox.get():
+            self.pre_lower_spinbox.set(self.pre_upper_spinbox.get())
+        delayPrelower = self.pre_lower_spinbox.get() - 50
+    def post_lower_spinbox_event(self):
+        if self.post_lower_spinbox.get() < 0:
+            self.post_lower_spinbox.set(0)
+        if self.post_lower_spinbox.get() >= self.post_lower_spinbox.get():
+            self.post_lower_spinbox.set(self.post_upper_spinbox.get() - 1)
+        delayPostlower = self.post_lower_spinbox.get()
+    def hold_lower_spinbox_event(self):
+        if self.hold_lower_spinbox.get() < 0:
+            self.hold_lower_spinbox.set(0)
+        if self.hold_lower_spinbox.get() >= self.hold_lower_spinbox.get():
+            self.hold_lower_spinbox.set(self.hold_upper_spinbox.get() - 1)
+        delayHoldlower = self.hold_lower_spinbox.get()
     
-    def fov_spinbox_event(self):
-        if self.fov_spinbox.get() < 1:
-            self.fov_spinbox.set(1)
-        fov = self.fov_spinbox.get()
-        self.fov_preview_frame.configure(width=fov, height=fov)
+    def trigger_fov_spinbox_event(self):
+        if self.trigger_fov_spinbox.get() < 1:
+            self.trigger_fov_spinbox.set(1)
+        global triggerFov
+        fov = self.trigger_fov_spinbox.get()
+        self.trigger_fov_preview_frame.configure(width=fov, height=fov)
+
+    def aim_fov_spinbox_event(self):
+        if self.aim_fov_spinbox.get() < 1:
+            self.aim_fov_spinbox.set(1)
+        global aimFov
+        fov = self.aim_fov_spinbox.get()
+        self.aim_fov_preview_frame.configure(width=fov, height=fov)
 
     def bind_button_click_event(self):
         dialog = customtkinter.CTkInputDialog(text="Which Key Would you like to use? Special keys must be spelled out. Ex: F5, ctrl, alt", title="Test")
         bind = dialog.get_input()
         print(bind)
         self.bind_label.configure(text=("Current Keybind: " + bind))
+
+    def preview_mask_click_event(self):
+        update_cam()
+        print("under construction")
+        #task = asyncio.create_task(display_preview())
+
 
     def change_appearance_mode_event(self, new_appearance_mode):
         customtkinter.set_appearance_mode(new_appearance_mode)
@@ -292,7 +457,34 @@ class App(customtkinter.CTk):
         customtkinter.set_widget_scaling(new_scaling_float)
 
 
+async def main():
+    processed_image_queue = multiprocessing.Queue()
+    asyncio.create_task(image_processing(processed_image_queue))
+
+def display_process(queue):
+    while True:
+        mask = queue.get()  # Get the processed image from the queue
+        
+        # Display the image only if it's valid
+        if mask is not None:
+            cv2.imshow('Video', mask)
+        
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
 if __name__ == "__main__":
+    # Create a multiprocessing queue for processed images
+    processed_image_queue = multiprocessing.Queue()
+
+    # Create and start the display process
+    display_process_instance = multiprocessing.Process(target=display_process, args=(processed_image_queue,))
+    display_process_instance.start()
+
+    # Run the main asynchronous loop
+    asyncio.run(main())
+
+    # Cleanup after exiting the loop
+    cv2.destroyAllWindows()
+
     app = App()
     app.mainloop()
-
